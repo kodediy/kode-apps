@@ -4,3 +4,6 @@
 [submodule "apps/kodecraft"]
 	path = apps/kodecraft
 	url = ../kode-app-kodecraft.git
+[submodule "apps/mando_ir"]
+	path = apps/mando_ir
+	url = ../kode-app-mando_ir.git
