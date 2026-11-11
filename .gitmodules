@@ -4,3 +4,6 @@
 [submodule "apps/kodecraft"]
 	path = apps/kodecraft
 	url = ../kode-app-kodecraft.git
+[submodule "apps/onboarding"]
+	path = apps/onboarding
+	url = ../kode-app-onboarding.git
