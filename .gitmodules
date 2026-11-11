@@ -4,3 +4,6 @@
 [submodule "apps/kodecraft"]
 	path = apps/kodecraft
 	url = ../kode-app-kodecraft.git
+[submodule "apps/nfc_full"]
+	path = apps/nfc_full
+	url = ../kode-app-nfc_full.git
