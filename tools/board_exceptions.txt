@@ -1,2 +1,9 @@
 # The sdkconfig.board keys an app may set in its own sdkconfig.defaults (rule B5).
 CONFIG_BT_ENABLED
+# One software draw unit. LVGL's decompressor of compressed fonts keeps its state in a global, so with
+# the board's two draw units drawing at once the large letters of a compressed font come out broken
+# (seen on Welcome, onboarding). An app that uses compressed fonts sets it to 1.
+CONFIG_LV_DRAW_SW_DRAW_UNIT_CNT
+# The refresh period. The board's 16 ms is what kodeOS draws at; an app with full-screen animations
+# that hold 30 fps (Welcome) sets 33 ms so every frame is drawn whole instead of half the frames late.
+CONFIG_LV_DEF_REFR_PERIOD
