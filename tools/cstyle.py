@@ -492,23 +492,29 @@ def main(argv):
     if mode == "lint":
         bad = 0
         for path in files:
-            for rule_id, n, what in lint_text(open(path, encoding="utf-8").read(), path):
+            with open(path, encoding="utf-8") as f:
+                src = f.read()
+            for rule_id, n, what in lint_text(src, path):
                 print(f"{rule_id} {path}:{n} {what}")
                 bad += 1
         sys.exit(1 if bad else 0)
     if mode == "check":
-        a = significant(tokenize(open(files[0]).read()))
-        b = significant(tokenize(open(files[1]).read()))
+        with open(files[0]) as f:
+            a = significant(tokenize(f.read()))
+        with open(files[1]) as f:
+            b = significant(tokenize(f.read()))
         sys.exit(0 if a == b else 1)
     notes, total = [], 0
     for path in files:
-        src = open(path, encoding="utf-8").read()
+        with open(path, encoding="utf-8") as f:
+            src = f.read()
         if mode == "blocks":
             out, n = pass_blocks(src, path, notes)
         else:
             out, n = pass_yoda(src, path, notes)
         if out != src:
-            open(path, "w", encoding="utf-8").write(out)
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(out)
         total += n
         print(f"{n:5d} {path}")
     print(f"total {total}")
