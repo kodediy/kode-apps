@@ -42,10 +42,24 @@ class RulesCTest(unittest.TestCase):
         self.assertEqual(self.found(), [])
 
     def test_c2_delay_in_ao_warns(self):
-        self.assertEqual(self.found({"main/good_app_ao.c": in_idle("kode_delay_ms(10U);")}), [("C2", "warn")])
+        self.assertEqual(self.found({"main/good_app_ao.c": in_idle("kode_delay(10U);")}), [("C2", "warn")])
 
     def test_c2_delay_in_plain_task_silent(self):
-        self.assertEqual(self.found({"main/task.c": plain_file("kode_delay_ms(10U);")}), [])
+        self.assertEqual(self.found({"main/task.c": plain_file("kode_delay(10U);")}), [])
+
+    def test_c2_resolve_in_ao_warns(self):
+        self.assertEqual(self.found({"main/good_app_ao.c": in_idle("kode_net_resolve(name, &addr);")}),
+                         [("C2", "warn")])
+
+    def test_c2_rfid_read_in_ao_warns(self):
+        self.assertEqual(self.found({"main/good_app_ao.c": in_idle("kode_rfid_read_id(1000U);")}), [("C2", "warn")])
+
+    def test_c2_nfc_read_id_in_ao_warns(self):
+        self.assertEqual(self.found({"main/good_app_ao.c": in_idle("kode_nfc_read_id(1000U);")}), [("C2", "warn")])
+
+    def test_c2_sem_wait_in_ao_warns(self):
+        self.assertEqual(self.found({"main/good_app_ao.c": in_idle("(void)khal_sem_wait_timeout(sem, 10U);")}),
+                         [("C2", "warn")])
 
     def test_c2_watch_off_rejects(self):
         self.assertEqual(self.found({"sdkconfig.defaults": SDKCONFIG + "CONFIG_KQP_AO_WATCH=n\n"}), [("C2", "reject")])

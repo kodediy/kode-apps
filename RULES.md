@@ -57,14 +57,14 @@ Add `--module-releases module_releases.json` when the app uses a module SDK.
 |---|---|---|
 | C1 | Nothing is posted to an Active Object before `kode_init()` returns. | review |
 | C2 | An Active Object never blocks: waiting work goes to a `kode_worker` or a task of the app. A blocking call in a file with state handlers is a warning; `CONFIG_KQP_AO_WATCH=n` is a reject. | warn |
-| C3 | Ask a device's owner by event; never drive a device an SDK Active Object owns. Including an I2S, LCD, codec, Wi-Fi, NimBLE or SDMMC driver header is a warning. The expansion header is the app's through `kode_exp_ctrl()`. | warn |
+| C3 | Ask a device's owner by event; never drive a device an SDK Active Object owns. Including an I2S, LCD, codec, Wi-Fi, NimBLE or SDMMC driver header is a warning. The expansion header is the app's through `kode_sys_exp_ctrl()`. | warn |
 | C4 | Subscribe first, then ask the owner for its state. | review |
 | C5 | The app's own signals start at `MAX_SIG` and are posted, never published. | warn |
 | C6 | Events carry copies of their data, not pointers into the sender's tables. | review |
 | C7 | Every `QACTIVE_START` comes after a `QActive_setAttr(..., TASK_NAME_ATTR, "<name>")` for the same Active Object. | reject |
 | C8 | A worker's stack is at least 8192 bytes, and a job never touches flash or NVS. | warn |
 | C9 | After the app's heaviest path, `test component=mem` passes on the board. | review |
-| C10 | Nothing secret is stored with `kode_nvs_*`: anyone can read it. | review |
+| C10 | Nothing secret is stored with `kode_setting_*`: anyone can read it. | review |
 | C11 | No credential anywhere in the app's history, scanned with the catalog's `tools/gitleaks.toml`. A secret that was rotated may be listed in `.gitleaksignore`, and every entry there needs the reviewer's explicit approval; a `.gitleaks.toml` of the app's own and an inline `gitleaks:allow` are refused. | reject |
 | C12 | No `esp_ota_*` call and no direct flash write: `esp_partition_write`, `esp_partition_erase_range`, `esp_flash_write`/`esp_flash_erase_*`, `spi_flash_write`/`spi_flash_erase_*`. | reject |
 
