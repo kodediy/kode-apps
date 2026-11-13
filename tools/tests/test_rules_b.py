@@ -95,6 +95,10 @@ class RulesBTest(unittest.TestCase):
         self.assertIn("CONFIG_BT_ENABLED=n", SDKCONFIG)
         self.assertEqual(self.found(), [])
 
+    def test_b5_esp_hosted_enabled_allowed(self):
+        self.assertIn("CONFIG_ESP_HOSTED_ENABLED=n", SDKCONFIG)
+        self.assertEqual(self.found(), [])
+
     def test_b6_too_big(self):
         self.assertEqual(self.found(build=self.build_of(8388609)), ["B6"])
 

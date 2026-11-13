@@ -23,6 +23,9 @@ CONFIG_SPIRAM_IGNORE_NOTFOUND=y
 # A plain malloc() takes PSRAM; internal RAM is asked for by capability.
 # (ESP-IDF)
 CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=0
+# No walk over all 32 MB on every boot: it costs about a second each time.
+# `test component=psram` tests the PSRAM, more thoroughly. (ESP-IDF)
+CONFIG_SPIRAM_MEMTEST=n
 
 # ---- Vendor stacks kept out of internal RAM ---------------------------------
 # esp-hosted's 88 KB of transport pools in PSRAM. (esp_hosted)
@@ -33,6 +36,16 @@ CONFIG_BT_NIMBLE_MEM_ALLOC_MODE_EXTERNAL=y
 # and a renewal is two handshakes while it is up, which would take the pool to
 # the 64 KB floor of `test component=mem`. (ESP-IDF)
 CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y
+# Parallel IO's handlers in flash, not IRAM: the LF tag emulation loops one
+# buffer in hardware with no callback, so their latency buys nothing. (ESP-IDF)
+CONFIG_PARLIO_TX_ISR_HANDLER_IN_IRAM=n
+CONFIG_PARLIO_RX_ISR_HANDLER_IN_IRAM=n
+
+# ---- MQTT -------------------------------------------------------------------
+# esp-mqtt's MQTT 5 code: the Kode channel keeps a persistent session with an
+# expiry, which 3.1.1 cannot ask for. Each client still picks its version, and
+# a bench client stays on 3.1.1. (esp-mqtt)
+CONFIG_MQTT_PROTOCOL_5=y
 
 # ---- Cache and MMU ----------------------------------------------------------
 # 128 KB of L2 cache; 512 KB does not boot. (ESP-IDF)
@@ -49,6 +62,9 @@ CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
 CONFIG_SLAVE_IDF_TARGET_ESP32C5=y
 # The same, for esp-hosted. (esp_hosted)
 CONFIG_ESP_HOSTED_CP_TARGET_ESP32C5=y
+# esp-hosted only when KODEOS_RADIO selects it: built in, it claims the SDMMC
+# controller before app_main, radio or not. (esp_hosted)
+CONFIG_ESP_HOSTED_ENABLED=n
 # SDIO slot 1 with this board's pins and the C5's reset on GPIO23. (esp_hosted)
 CONFIG_ESP_HOSTED_SDIO_HOST_INTERFACE=y
 CONFIG_ESP_HOSTED_P4_DEV_BOARD_NONE=y
@@ -75,10 +91,11 @@ CONFIG_ESP_HOSTED_SLAVE_RESET_ONLY_IF_NECESSARY=y
 # ---- BLE host ---------------------------------------------------------------
 # What KODEOS_BLE needs, here and not in a firmware's own defaults because
 # BT_NIMBLE_ENABLED is a choice no option can select and every app reads this
-# file first. An app leaves BLE out with CONFIG_KODEOS_BLE=n. NimBLE's buffers
-# in PSRAM are set under "Vendor stacks" below.
+# file first. Off until a firmware turns it on with CONFIG_BT_ENABLED=y and
+# CONFIG_KODEOS_BLE=y, so an app without Bluetooth does not carry the stack.
+# NimBLE's buffers in PSRAM are set under "Vendor stacks" below.
 # BLE host only: NimBLE with no controller of its own. (ESP-IDF)
-CONFIG_BT_ENABLED=y
+CONFIG_BT_ENABLED=n
 CONFIG_BT_NIMBLE_ENABLED=y
 CONFIG_BT_NIMBLE_TRANSPORT_UART=n
 # NimBLE reaches the C5's controller over esp-hosted. (esp_hosted)
@@ -92,6 +109,11 @@ CONFIG_BT_NIMBLE_CRYPTO_STACK_MBEDTLS=y
 CONFIG_BT_NIMBLE_LOG_LEVEL_WARNING=y
 # Enough mbufs for the console's notifications. (ESP-IDF)
 CONFIG_BT_NIMBLE_MSYS_1_BLOCK_COUNT=24
+# One store keeps every bond's subscriptions: the three bonds of
+# BT_NIMBLE_MAX_BONDS times the seven one link can hold (Service Changed, the
+# console's TX, the mirror's pipe, an app's four characteristics). kdrv_ble.c
+# asserts the product fits. (ESP-IDF)
+CONFIG_BT_NIMBLE_MAX_CCCDS=21
 
 # ---- Clocks -----------------------------------------------------------------
 # CPU at 400 MHz. (ESP-IDF)
@@ -102,7 +124,13 @@ CONFIG_RTC_CLK_SRC_EXT_CRYS=y
 # ---- System -----------------------------------------------------------------
 # 1 ms FreeRTOS tick. (ESP-IDF)
 CONFIG_FREERTOS_HZ=1000
-# 8 KB main task: kode_init() starts every owner AO on it. (ESP-IDF)
+# Two thread-local pointers per task: index 0 is ESP-IDF's pthread layer, index 1
+# is khal_task_slot_get()/set(), the standard layer's one pointer per task. (ESP-IDF)
+CONFIG_FREERTOS_THREAD_LOCAL_STORAGE_POINTERS=2
+# A task's slot is freed when the task ends: khal_task_slot_set_owned() needs
+# the deletion callbacks, and khal_system_esp.c stops the build without them. (ESP-IDF)
+CONFIG_FREERTOS_TLSP_DELETION_CALLBACKS=y
+# 8 KB main task: kode_init() starts the owner AOs an app links on it. (ESP-IDF)
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
 # The DSI interrupt keeps running while the flash cache is off. (ESP-IDF)
 CONFIG_LCD_DSI_ISR_CACHE_SAFE=y
@@ -143,3 +171,6 @@ CONFIG_LV_COLOR_MIX_ROUND_OFS=128
 CONFIG_LV_USE_QRCODE=y
 # lv_obj_set_name_static(), which the kit's screens call. (LVGL)
 CONFIG_LV_USE_OBJ_NAME=y
+# Fonts lv_font_conv compressed, as it does without --no-compress: without
+# this, LVGL draws none of their glyphs. The kit's faces are plain. (LVGL)
+CONFIG_LV_USE_FONT_COMPRESSED=y
