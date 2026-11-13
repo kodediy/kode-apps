@@ -142,6 +142,14 @@ class RulesBTest(unittest.TestCase):
         yml = YML.replace("git@github.com:kodediy/kode-sdk.git", "git@github.com:evil/kode-sdk.git", 1)
         self.assertEqual(self.found({"main/idf_component.yml": yml}), ["B1"])
 
+    def test_b1_sdk_over_https(self):
+        yml = YML.replace("git@github.com:kodediy/kode-sdk.git", "https://github.com/kodediy/kode-sdk.git")
+        self.assertEqual(self.found({"main/idf_component.yml": yml}), [])
+
+    def test_b1_foreign_https_url(self):
+        yml = YML.replace("git@github.com:kodediy/kode-sdk.git", "https://github.com/evil/kode-sdk.git", 1)
+        self.assertEqual(self.found({"main/idf_component.yml": yml}), ["B1"])
+
     def test_b1_wrong_component_path(self):
         self.assertEqual(self.found({"main/idf_component.yml": YML.replace("components/kui", "components/kode2")}), ["B1"])
 
