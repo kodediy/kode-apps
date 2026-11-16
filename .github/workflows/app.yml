@@ -9,6 +9,17 @@ on:
     branches: [main]
   push:
     branches: [main]
+  # Started by hand: checks the named apps again and, on main, publishes them.
+  # A push to main does that only for the apps it changed; this is the way to
+  # publish an app whose push ran nothing or failed. publish_app.py skips a
+  # version the marketplace already has, so naming a published app uploads
+  # nothing.
+  workflow_dispatch:
+    inputs:
+      apps:
+        description: The apps to check and publish, by name, separated by spaces
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -22,6 +33,9 @@ concurrency:
 jobs:
   # The rule script's own tests, against KodeOS's kappdata.py.
   tests:
+    # Waits for the maintainer's approval in the environment ci: nothing in
+    # this run starts without it.
+    environment: ci
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,6 +45,7 @@ jobs:
           app-id: ${{ vars.CATALOG_APP_ID }}
           private-key: ${{ secrets.CATALOG_APP_KEY }}
           owner: kodediy
+          permission-contents: read
       - name: Fetch kappdata.py from KodeOS
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
@@ -41,8 +56,12 @@ jobs:
       - name: Run the tests
         run: KODEOS_TOOLS="$RUNNER_TEMP/kodeos_tools" tools/run_tests.sh
 
-  # The catalog's own checks, and one matrix entry per app the pull request or the push changes.
+  # The catalog's own checks, and one matrix entry per app the pull request or the push changes,
+  # or the run started by hand names.
   find:
+    # Waits for the maintainer's approval in the environment ci: nothing in
+    # this run starts without it.
+    environment: ci
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.find.outputs.matrix }}
@@ -57,6 +76,7 @@ jobs:
           app-id: ${{ vars.CATALOG_APP_ID }}
           private-key: ${{ secrets.CATALOG_APP_KEY }}
           owner: kodediy
+          permission-contents: read
       - name: Fetch what the checks read
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
@@ -83,11 +103,20 @@ jobs:
           GH_TOKEN: ${{ steps.token.outputs.token }}
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          APPS: ${{ inputs.apps }}
         run: |
           mkdir -p findings
           catalog_status=0
-          python3 -I tools/check_app.py catalog --catalog . --base "$BASE" --head "$HEAD" \
-            > findings/catalog.txt || catalog_status=$?
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            # Each named app at the commit this run is on, as if it were new;
+            # a name that is no app lists none, and the run fails.
+            read -ra named <<< "$APPS"
+            python3 -I tools/check_app.py catalog --catalog . --apps "${named[@]}" \
+              > findings/catalog.txt || catalog_status=$?
+          else
+            python3 -I tools/check_app.py catalog --catalog . --base "$BASE" --head "$HEAD" \
+              > findings/catalog.txt || catalog_status=$?
+          fi
           cat findings/catalog.txt
           raw() { gh api "$1" -H 'Accept: application/vnd.github.raw'; }
           newest=$(jq -r 'map(.tagName) | map(select(test("^v[0-9]+[.][0-9]+[.][0-9]+$")))
@@ -161,6 +190,8 @@ jobs:
           app-id: ${{ vars.CATALOG_APP_ID }}
           private-key: ${{ secrets.CATALOG_APP_KEY }}
           owner: kodediy
+          # Read only: this job builds the app's own code with the token in git's config.
+          permission-contents: read
       - uses: actions/download-artifact@v4
         with:
           name: inputs
@@ -237,14 +268,14 @@ jobs:
       - name: Fail on a failed build or a reject
         run: test "$BUILD_OK" = 1 && test "$CHECK_STATUS" = 0
 
-  # On main: each app the push added or moved, with the .bin the rules just
-  # passed, goes to the marketplace under the publisher Kode and is submitted
-  # for review. Never two uploads of one app at once, and publish_app.py skips
-  # a version the marketplace already has or tops, so a late run never puts an
-  # old one back.
+  # On main: each app the push added or moved, or the run started by hand
+  # names, with the .bin the rules just passed, goes to the marketplace under
+  # the publisher Kode and is submitted for review. Never two uploads of one
+  # app at once, and publish_app.py skips a version the marketplace already
+  # has or tops, so a late run never puts an old one back.
   publish:
     needs: [find, check]
-    if: github.event_name == 'push' && needs.check.result == 'success'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && needs.check.result == 'success'
     name: publish ${{ matrix.name }}
     runs-on: ubuntu-latest
     concurrency:
@@ -265,6 +296,7 @@ jobs:
           app-id: ${{ vars.CATALOG_APP_ID }}
           private-key: ${{ secrets.CATALOG_APP_KEY }}
           owner: kodediy
+          permission-contents: read
       - name: Fetch the app
         env:
           TOKEN: ${{ steps.token.outputs.token }}

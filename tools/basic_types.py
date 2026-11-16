@@ -21,7 +21,9 @@ def scan_file(p):
     """(line, text) of each line of p that declares with a plain basic type."""
     hits = []
     inblock = False
-    for n, line in enumerate(open(p, errors='ignore'), 1):
+    with open(p, errors='ignore') as f:
+        lines = f.readlines()
+    for n, line in enumerate(lines, 1):
         code = line
         # strip comments
         if inblock:

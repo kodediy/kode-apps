@@ -1,13 +1,14 @@
-"""The catalog-wide checks (A1, A2's catalog half) and the list of changed apps.
+"""The catalog-wide checks (A1, A2's catalog half) and the lists of changed and named apps.
 
     tools/run_tests.sh
 """
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-from tests.helpers import ids
+from tests.helpers import TOOLS, ids
 
 from kcheck import catalog
 from kcheck.catalog import Change
@@ -130,6 +131,39 @@ class CatalogTest(unittest.TestCase):
         self.modules(("apps/x", "../kode-app-x.git"))
         git(self.root, "update-index", "--add", "--cacheinfo", f"160000,{'1' * 40},apps/x")
         self.assertEqual(catalog.check_catalog(self.root), [])
+
+    def commit_apps(self, **pins):
+        """A catalog repository whose last commit pins each app to its sha."""
+        self.init_catalog()
+        self.modules(*((f"apps/{n}", f"../kode-app-{n}.git") for n in pins))
+        for name, sha in pins.items():
+            git(self.root, "update-index", "--add", "--cacheinfo", f"160000,{sha},apps/{name}")
+        git(self.root, "add", ".gitmodules", "categories.txt")
+        git(self.root, "commit", "-q", "-m", "apps")
+
+    def test_named_apps_lists_each_pin_in_order(self):
+        self.commit_apps(x="1" * 40, y="2" * 40)
+        self.assertEqual(catalog.named_apps(self.root, ["y", "x"]),
+                         [Change("y", None, "2" * 40), Change("x", None, "1" * 40)])
+
+    def test_named_apps_refuses_what_is_not_an_app(self):
+        self.commit_apps(x="1" * 40)
+        (self.root / "apps").mkdir()
+        (self.root / "apps" / "notes").write_text("x\n")
+        git(self.root, "add", "apps/notes")
+        git(self.root, "commit", "-q", "-m", "a file, not an app")
+        for names in (["z"], ["x", "z"], ["x", "x"], ["../x"], ["notes"], ["X"]):
+            with self.subTest(names=names), self.assertRaises(ValueError):
+                catalog.named_apps(self.root, names)
+
+    def test_command_lists_named_apps_or_refuses(self):
+        self.commit_apps(x="1" * 40)
+        cmd = [sys.executable, "-I", str(TOOLS / "check_app.py"), "catalog", "--catalog", str(self.root), "--apps"]
+        r = subprocess.run([*cmd, "x"], capture_output=True, text=True)
+        self.assertEqual((r.returncode, r.stdout), (0, f"change x - {'1' * 40}\n"), r.stderr)
+        r = subprocess.run([*cmd, "x", "z"], capture_output=True, text=True)
+        self.assertEqual((r.returncode, r.stdout), (2, ""))
+        self.assertIn("'z' is not an app of the catalog", r.stderr)
 
 
 if __name__ == "__main__":
