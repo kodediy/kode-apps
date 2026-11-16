@@ -4,3 +4,15 @@
 [submodule "apps/kodecraft"]
 	path = apps/kodecraft
 	url = ../kode-app-kodecraft.git
+[submodule "apps/mando_ir"]
+	path = apps/mando_ir
+	url = ../kode-app-mando_ir.git
+[submodule "apps/rfid"]
+	path = apps/rfid
+	url = ../kode-app-rfid.git
+[submodule "apps/meshkode"]
+	path = apps/meshkode
+	url = ../kode-app-meshkode.git
+[submodule "apps/onboarding"]
+	path = apps/onboarding
+	url = ../kode-app-onboarding.git

@@ -5,7 +5,7 @@
                        [--releases FILE] [--module-releases FILE] [--old-cmake FILE]
                        [--kappdata-dir DIR]
                        [--secrets-report FILE] [--output FILE]
-    check_app.py catalog --catalog DIR [--base SHA --head SHA]
+    check_app.py catalog --catalog DIR [--base SHA --head SHA | --apps NAME...]
     check_app.py sdk-tag APP        the kodediy/kode tag the app pins
     check_app.py version APP        the app's PROJECT_VER
 
@@ -67,9 +67,18 @@ def cmd_catalog(a) -> int:
     found = catalog.check_catalog(a.catalog)
     for f in found:
         print(f.format())
-    if a.base and a.head:
-        for c in catalog.changed_apps(a.catalog, a.base, a.head):
-            print(f"change {c.name} {c.old or '-'} {c.new or '-'}")
+    if a.apps:
+        try:
+            changes = catalog.named_apps(a.catalog, a.apps)
+        except ValueError as exc:
+            print(f"--apps: {exc}", file=sys.stderr)
+            return 2
+    elif a.base and a.head:
+        changes = catalog.changed_apps(a.catalog, a.base, a.head)
+    else:
+        changes = []
+    for c in changes:
+        print(f"change {c.name} {c.old or '-'} {c.new or '-'}")
     return core.exit_code(found)
 
 
@@ -110,6 +119,8 @@ def main(argv=None) -> int:
     k.add_argument("--catalog", type=existing_dir, required=True)
     k.add_argument("--base")
     k.add_argument("--head")
+    k.add_argument("--apps", nargs="+", metavar="NAME",
+                   help="list these apps of HEAD as added, to check and publish them again")
     for name in ("sdk-tag", "version"):
         s = sub.add_parser(name)
         s.add_argument("app", type=existing_dir)
