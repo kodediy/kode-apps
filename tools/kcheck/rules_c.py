@@ -155,7 +155,7 @@ def c11_secrets(ctx):
         for n, line in enumerate(ignore.read_text().splitlines(), 1):
             if line.strip() and not line.startswith("#"):
                 yield Finding("C11", "warn", ".gitleaksignore", n,
-                              f"ignored: {line.strip()} (needs Jorge's approval)")
+                              f"ignored: {line.strip()} (needs a maintainer's approval)")
 
 
 @rule("C12", "reject")

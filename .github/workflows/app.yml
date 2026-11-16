@@ -31,6 +31,7 @@ jobs:
           app-id: ${{ vars.CATALOG_APP_ID }}
           private-key: ${{ secrets.CATALOG_APP_KEY }}
           owner: kodediy
+          permission-contents: read
       - name: Fetch kappdata.py from KodeOS
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
@@ -57,6 +58,7 @@ jobs:
           app-id: ${{ vars.CATALOG_APP_ID }}
           private-key: ${{ secrets.CATALOG_APP_KEY }}
           owner: kodediy
+          permission-contents: read
       - name: Fetch what the checks read
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
@@ -161,6 +163,8 @@ jobs:
           app-id: ${{ vars.CATALOG_APP_ID }}
           private-key: ${{ secrets.CATALOG_APP_KEY }}
           owner: kodediy
+          # Read only: this job builds the app's own code with the token in git's config.
+          permission-contents: read
       - uses: actions/download-artifact@v4
         with:
           name: inputs
@@ -265,6 +269,7 @@ jobs:
           app-id: ${{ vars.CATALOG_APP_ID }}
           private-key: ${{ secrets.CATALOG_APP_KEY }}
           owner: kodediy
+          permission-contents: read
       - name: Fetch the app
         env:
           TOKEN: ${{ steps.token.outputs.token }}
