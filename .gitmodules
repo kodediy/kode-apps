@@ -7,3 +7,9 @@
 [submodule "apps/rfid"]
 	path = apps/rfid
 	url = ../kode-app-rfid.git
+[submodule "apps/meshkode"]
+	path = apps/meshkode
+	url = ../kode-app-meshkode.git
+[submodule "apps/onboarding"]
+	path = apps/onboarding
+	url = ../kode-app-onboarding.git
