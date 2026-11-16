@@ -1,4 +1,4 @@
-"""The catalog's own checks, and which apps a pull request changes.
+"""The catalog's own checks, and which apps a pull request changes or a maintainer names.
 
 A1: every submodule is `apps/<name>` with the relative URL `../kode-app-<name>.git`.
 A2: every name is a valid, unreserved project name, used once.
@@ -113,4 +113,26 @@ def changed_apps(catalog: Path, base: str, head: str) -> list[Change]:
         old = old_sha if old_mode == GITLINK else None
         new = new_sha if new_mode == GITLINK else None
         changes.append(Change(path.split("/", 1)[1], old, new))
+    return changes
+
+
+def named_apps(catalog: Path, names: list[str], head: str = "HEAD") -> list[Change]:
+    """Each named app at the commit head pins, as a change from nothing.
+
+    A run started by hand checks and publishes these again. A name that is not
+    an app of head, or is named twice, raises ValueError before any is listed.
+    """
+    changes = []
+    for name in names:
+        if not NAME_RE.fullmatch(name):
+            raise ValueError(f"{name!r} is not an app name")
+        if any(c.name == name for c in changes):
+            raise ValueError(f"{name!r} is named twice")
+        out = subprocess.run(["git", "-C", str(catalog), "ls-tree", head, "--", f"apps/{name}"],
+                             check=True, capture_output=True, text=True).stdout
+        meta, _, path = out.strip().partition("\t")
+        fields = meta.split(" ")
+        if path != f"apps/{name}" or len(fields) != 3 or fields[0] != GITLINK:
+            raise ValueError(f"{name!r} is not an app of the catalog")
+        changes.append(Change(name, None, fields[2]))
     return changes
