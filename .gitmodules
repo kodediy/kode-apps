@@ -4,6 +4,9 @@
 [submodule "apps/kodecraft"]
 	path = apps/kodecraft
 	url = ../kode-app-kodecraft.git
+[submodule "apps/rfid"]
+	path = apps/rfid
+	url = ../kode-app-rfid.git
 [submodule "apps/meshkode"]
 	path = apps/meshkode
 	url = ../kode-app-meshkode.git
