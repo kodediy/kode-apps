@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import warnings
 from pathlib import Path
 
 from tests.helpers import FIXTURES, TOOLS
@@ -72,6 +73,16 @@ class CstyleFixModesTest(unittest.TestCase):
                                check=True, capture_output=True)
             self.assertEqual(p.read_text(), (FIXTURES / "cstyle" / "after.c").read_text())
 
+    def test_every_mode_closes_its_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "x.c"
+            shutil.copy(FIXTURES / "cstyle" / "before.c", p)
+            for args in (["lint", p], ["check", p, p], ["blocks", p], ["yoda", p]):
+                r = subprocess.run([sys.executable, "-I", "-W", "always::ResourceWarning",
+                                    str(TOOLS / "cstyle.py"), *map(str, args)],
+                                   capture_output=True, text=True)
+                self.assertNotIn("ResourceWarning", r.stderr, args[0])
+
 
 class BasicTypesTest(unittest.TestCase):
     def test_scan_and_findings(self):
@@ -82,6 +93,14 @@ class BasicTypesTest(unittest.TestCase):
             r = subprocess.run([sys.executable, "-I", str(TOOLS / "basic_types.py"), "--findings", tmp],
                                capture_output=True, text=True)
             self.assertEqual(r.stdout.strip(), f"E9 {p}:1 int n;")
+
+    def test_scan_closes_each_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "a.c").write_text("int n;\n")
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always", ResourceWarning)
+                basic_types.scan([tmp])
+            self.assertEqual([w for w in caught if w.category is ResourceWarning], [])
 
 
 if __name__ == "__main__":

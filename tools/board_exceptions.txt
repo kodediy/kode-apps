@@ -1,5 +1,6 @@
 # The sdkconfig.board keys an app may set in its own sdkconfig.defaults (rule B5).
 CONFIG_BT_ENABLED
+CONFIG_ESP_HOSTED_ENABLED
 # One software draw unit. LVGL's decompressor of compressed fonts keeps its state in a global, so with
 # the board's two draw units drawing at once the large letters of a compressed font come out broken
 # (seen on Welcome, onboarding). An app that uses compressed fonts sets it to 1.
