@@ -27,10 +27,14 @@ class ListingTest(unittest.TestCase):
         self.assertEqual(got["slug"], "good-app")
         self.assertEqual(got["name"], "Good App")
         self.assertEqual(got["version"], "1.0.0")
-        self.assertEqual(got["category"], "utility")
+        self.assertEqual(got["category"], "tool")
         self.assertEqual(got["description"], "A fixture.")
         self.assertEqual(got["githubUrl"], "https://github.com/kodediy/kode-app-good_app")
         self.assertEqual(got["icon"].name, "icon.png")
+
+    def test_every_category_is_the_marketplaces(self):
+        for cat, theirs in listing.CATEGORY_MAP.items():
+            self.assertIn(theirs, listing.MARKETPLACE_CATEGORIES, cat)
 
     def test_first_category_decides(self):
         main = MAIN.replace('"tools");', '"games,tools");')
