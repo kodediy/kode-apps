@@ -19,3 +19,6 @@
 [submodule "apps/subghz"]
 	path = apps/subghz
 	url = ../kode-app-subghz.git
+[submodule "apps/kody_kart"]
+	path = apps/kody_kart
+	url = ../kode-app-kody_kart.git
