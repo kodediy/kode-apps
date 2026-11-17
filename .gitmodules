@@ -25,3 +25,6 @@
 [submodule "apps/nfc"]
 	path = apps/nfc
 	url = ../kode-app-nfc.git
+[submodule "apps/escaner"]
+	path = apps/escaner
+	url = ../kode-app-escaner.git
