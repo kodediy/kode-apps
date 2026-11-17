@@ -25,3 +25,6 @@
 [submodule "apps/nfc"]
 	path = apps/nfc
 	url = ../kode-app-nfc.git
+[submodule "apps/badusb"]
+	path = apps/badusb
+	url = ../kode-app-badusb.git
