@@ -14,15 +14,16 @@ from kcheck.rules_a import load_kappdata
 
 GITHUB = "https://github.com/kodediy/kode-app-"
 COVER_EXT = (".png", ".jpg", ".jpeg")  # the icons kappdata finds that the marketplace takes as a cover
-# The catalog's categories (categories.txt) in the marketplace's own list:
-# utility, game, ai, sensor, display, communication, other.
+# The categories the marketplace takes; it refuses any other word.
+MARKETPLACE_CATEGORIES = ("game", "tool", "communication", "wireless", "creative", "maker", "ai")
+# The catalog's categories (categories.txt) in the marketplace's own list.
 CATEGORY_MAP = {
     "ai": "ai",
     "communication": "communication",
     "games": "game",
-    "media": "other",
-    "tools": "utility",
-    "wireless": "utility",
+    "media": "creative",
+    "tools": "tool",
+    "wireless": "wireless",
 }
 
 
