@@ -22,3 +22,6 @@
 [submodule "apps/kody_kart"]
 	path = apps/kody_kart
 	url = ../kode-app-kody_kart.git
+[submodule "apps/nfc"]
+	path = apps/nfc
+	url = ../kode-app-nfc.git
