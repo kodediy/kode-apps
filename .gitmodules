@@ -25,3 +25,6 @@
 [submodule "apps/nfc"]
 	path = apps/nfc
 	url = ../kode-app-nfc.git
+[submodule "apps/gemini"]
+	path = apps/gemini
+	url = ../kode-app-gemini.git
