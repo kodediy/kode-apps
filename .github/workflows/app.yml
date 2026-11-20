@@ -33,8 +33,8 @@ concurrency:
 jobs:
   # The rule script's own tests, against KodeOS's kappdata.py.
   tests:
-    # Waits for the maintainer's approval in the environment ci: nothing in
-    # this run starts without it.
+    # The environment ci names no required reviewer, so the run starts on its
+    # own; one named there would hold every run until approved.
     environment: ci
     runs-on: ubuntu-latest
     steps:
@@ -59,8 +59,8 @@ jobs:
   # The catalog's own checks, and one matrix entry per app the pull request or the push changes,
   # or the run started by hand names.
   find:
-    # Waits for the maintainer's approval in the environment ci: nothing in
-    # this run starts without it.
+    # The environment ci names no required reviewer, so the run starts on its
+    # own; one named there would hold every run until approved.
     environment: ci
     runs-on: ubuntu-latest
     outputs:

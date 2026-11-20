@@ -2,7 +2,7 @@
 
 Every app in the catalog follows these rules. Each rule has an id, used by `tools/check_app.py`, in review issues and here. A rule's level says who judges it: **reject** fails the check, **warn** is reported in the pull request comment for the reviewer to look at, **review** is judged by the reviewer on a Kode Dot.
 
-A passed check means every reject rule passed. It does not mean the app is good: the review rules are judged by a person, with the app running on a board.
+A passed check means every reject rule passed. It does not mean the app is good: the review rules are judged by a person after the app is published, with the app running on a board.
 
 Run the checks before you open the pull request, from a checkout of this repository, after building the app. The first command lists the published SDK releases that B1 compares the pin with; the second scans the app's history for secrets (C11) with the catalog's settings:
 
