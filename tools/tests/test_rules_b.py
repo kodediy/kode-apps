@@ -54,8 +54,14 @@ class RulesBTest(unittest.TestCase):
     def test_b1_previous_release_passes(self):
         self.assertEqual(self.found({"main/idf_component.yml": pin("v00.00.26", "v00.00.26")}), [])
 
-    def test_b1_too_old(self):
-        self.assertEqual(self.found({"main/idf_component.yml": pin("v00.00.25", "v00.00.25")}), ["B1"])
+    def test_b1_older_release_of_the_line_passes(self):
+        self.assertEqual(self.found({"main/idf_component.yml": pin("v00.00.25", "v00.00.25")}), [])
+
+    def test_b1_unpublished_tag(self):
+        self.assertEqual(self.found({"main/idf_component.yml": pin("v00.00.24", "v00.00.24")}), ["B1"])
+
+    def test_b1_older_line(self):
+        self.assertEqual(self.found(releases=["v00.01.00", "v00.00.27", "v00.00.26"]), ["B1"])
 
     def test_b1_range(self):
         self.assertEqual(self.found({"main/idf_component.yml": pin('"^v00.00.27"', '"^v00.00.27"')}), ["B1"])
@@ -64,7 +70,9 @@ class RulesBTest(unittest.TestCase):
         self.assertEqual(self.found({"main/idf_component.yml": pin('"v00.00.27"', '"v00.00.27"')}), [])
 
     def test_b1_order_is_by_version(self):
-        self.assertEqual(self.found(releases=["v00.00.9", "v00.00.27", "v00.00.10"]), [])
+        yml = pin("v00.10.00", "v00.10.00")
+        self.assertEqual(self.found({"main/idf_component.yml": yml}, releases=["v00.9.00", "v00.10.00", "v00.00.27"]),
+                         [])
 
     def test_b1_no_release_list(self):
         self.assertEqual(self.found(releases=[]), ["B1"])
