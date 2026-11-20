@@ -36,6 +36,7 @@ Add `--module-releases module_releases.json` when the app uses a module SDK.
 | A4 | `appdata/app.json` holds `"kode": "1"` and only the keys `color`, `description` and `icon`, within the limits KodeOS's `tools/kappdata.py` checks; `appdata/` holds an icon (`icon.png` or `icon.jpg`). The name and the categories come from the manifest, the version from the build. | reject |
 | A5 | `LICENSE` is the text of the GNU GPL version 3, whole and unchanged (compared with this repository's `LICENSE`, whitespace aside). | reject |
 | A6 | `CMakeLists.txt` has `set(PROJECT_VER "MAJOR.MINOR.PATCH")` before `project()`, and every new version of the app raises it. To go back to older code, publish it as a new, higher version. | reject |
+| A7 | `appdata/store.md` is the text of the app's page on the marketplace: what the app does, what it shows and how it is used, what it needs besides the Kode, in 200 to 2,000 characters. Write it in the marketplace's markdown subset (`**bold**`, `*italic*`, `` `code` `` and lists); a heading, a link, an image or raw HTML is refused, since the page strips them to text. Without the file the page shows only the line of `app.json`, which is the one kodeOS shows under the icon (52 characters): that is a warning, and a file out of these limits is a reject. | reject |
 
 ## B. Build
 
@@ -77,7 +78,7 @@ Add `--module-releases module_releases.json` when the app uses a module SDK.
 | D4 | Only a tap acts: a press that travels more than 10 px acts on nothing. | review |
 | D7 | A destructive action asks, then confirms; before going grey or dead the app says why. | review |
 | D8 | Holding BOT returns to kodeOS from any app: never set `CONFIG_KODEOS_HOME_HOLD=n`, and give the hold no meaning of your own. | reject |
-| D9 | `appdata/screenshots/` holds 1 to 4 PNG files of 410 x 502, taken with `kcli.py screenshot`. | reject |
+| D9 | `appdata/screenshots/` holds 1 to 4 PNG files of 410 x 502, taken with `kcli.py screenshot`. They are the pictures of the app's page on the marketplace, in the order of their names. | reject |
 
 ### Pending style
 

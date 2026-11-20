@@ -16,6 +16,18 @@ DISPLAY_MAX = 31
 CATEGORIES_MAX = 4
 APP_JSON_KEYS = ("kode", "color", "description", "icon")
 VERSION_RE = re.compile(r"\d+\.\d+\.\d+")
+# A7: the text of the app's page on the marketplace. app.json's description is
+# the line kodeOS shows under the icon (52 characters); this is the page.
+STORE_TEXT = "appdata/store.md"
+STORE_TEXT_MIN = 200
+STORE_TEXT_MAX = 2000
+# What the marketplace strips to text (https://api.kode.diy/agents/upload.md):
+# a heading, a link or an image, and raw HTML.
+STORE_TEXT_STRIPPED = (
+    (re.compile(r"^\s{0,3}#{1,6}\s", re.M), "a heading"),
+    (re.compile(r"!?\[[^\]]*\]\([^)]*\)"), "a link or an image"),
+    (re.compile(r"</?[A-Za-z][^>]*>"), "raw HTML"),
+)
 
 
 @rule("A2", "reject")
@@ -113,3 +125,22 @@ def a6_version(ctx):
         return
     if version_tuple(ver) <= version_tuple(old):
         yield Finding("A6", "reject", "CMakeLists.txt", 0, f"version {ver} must be above the catalog's {old}")
+
+
+@rule("A7", "reject")
+def a7_store_text(ctx):
+    p = ctx.app / STORE_TEXT
+    if not p.is_file():
+        yield Finding("A7", "warn", STORE_TEXT, 0,
+                      "missing: the marketplace page shows only app.json's one line; write what the app does and how")
+        return
+    text = p.read_text(errors="replace").strip()
+    if not STORE_TEXT_MIN <= len(text) <= STORE_TEXT_MAX:
+        yield Finding("A7", "reject", STORE_TEXT, 0,
+                      f"{len(text)} characters, {STORE_TEXT_MIN} to {STORE_TEXT_MAX} wanted")
+    for pattern, what in STORE_TEXT_STRIPPED:
+        hit = pattern.search(text)
+        if hit:
+            line = text.count("\n", 0, hit.start()) + 1
+            yield Finding("A7", "reject", STORE_TEXT, line,
+                          f"{what}: the marketplace strips it to text; use bold, italic, code and lists")
