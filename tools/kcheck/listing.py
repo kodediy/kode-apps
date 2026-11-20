@@ -10,9 +10,10 @@ import json
 from pathlib import Path
 
 from kcheck import source
-from kcheck.rules_a import load_kappdata
+from kcheck.rules_a import STORE_TEXT, load_kappdata
 
 GITHUB = "https://github.com/kodediy/kode-app-"
+SHOTS_DIR = "appdata/screenshots"  # D9: what the app looks like, shown on its page
 COVER_EXT = (".png", ".jpg", ".jpeg")  # the icons kappdata finds that the marketplace takes as a cover
 # What a transparent icon is laid on for the cover when app.json names no
 # colour: the black page kodeOS draws an app's disc on.
@@ -68,8 +69,23 @@ def listing(app: Path, kappdata_dir: Path | None) -> dict:
         "name": display,
         "version": version,
         "category": CATEGORY_MAP[first],
-        "description": obj.get("description", ""),
+        "description": store_text(app) or obj.get("description", ""),
         "githubUrl": GITHUB + name,
         "icon": Path(icon),
         "color": obj.get("color", COVER_GROUND),
+        "screenshots": screenshots(app),
     }
+
+
+def store_text(app: Path) -> str:
+    """The page's text from appdata/store.md (rule A7), or "" when the app has none."""
+    p = app / STORE_TEXT
+    return p.read_text(errors="replace").strip() if p.is_file() else ""
+
+
+def screenshots(app: Path) -> list[Path]:
+    """The PNG files of appdata/screenshots/ (rule D9), in the order of their names."""
+    folder = app / SHOTS_DIR
+    if not folder.is_dir():
+        return []
+    return sorted(p for p in folder.iterdir() if p.is_file() and p.suffix.lower() == ".png")

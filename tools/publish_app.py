@@ -19,8 +19,12 @@ is a republish of the same app: same id, page and download link. Steps:
 2. The icon goes up as the cover (`POST /apps/upload-cover`): a submission
    without one is refused, and so is a cover with transparency, so an icon
    with an alpha channel goes laid on the app's colour (kcheck.cover).
-3. The upload (`POST /apps/upload`) with `status=published`, which submits
-   it for review. A submission still pending is withdrawn first: the
+3. Each screenshot of appdata/screenshots/ goes up (`POST
+   /apps/upload-screenshot`), in the order of their names; the page shows
+   them between the install button and the text.
+4. The upload (`POST /apps/upload`) with `status=published`, which submits
+   it for review. The text is appdata/store.md (rule A7) when the app has
+   one, app.json's one line when not, and the screenshots go as their urls. A submission still pending is withdrawn first: the
    catalog's main is what the marketplace is meant to show.
 
 Exits 0 when the app is submitted or already there, 1 otherwise. The contract
@@ -115,7 +119,21 @@ def is_at_or_above(stored: str | None, ours: str) -> bool:
     return version_tuple(stored) >= version_tuple(ours)
 
 
-def upload(api: Api, info: dict, cover_url: str, binary: Path) -> tuple[int, dict]:
+def upload_screenshots(api: Api, info: dict) -> list[str] | None:
+    """The urls of the app's screenshots once stored, in order; None when one is refused."""
+    urls = []
+    for shot in info.get("screenshots", []):
+        body, kind = multipart({}, {"file": shot})
+        status, got = api.call("POST", "/apps/upload-screenshot", body, kind)
+        if status not in (200, 201) or not got.get("url"):
+            print(f"{info['slug']}: the screenshot {shot.name} answered {status}: {got.get('error', got)}",
+                  file=sys.stderr)
+            return None
+        urls.append(got["url"])
+    return urls
+
+
+def upload(api: Api, info: dict, cover_url: str, binary: Path, shots: list[str]) -> tuple[int, dict]:
     fields = {
         "slug": info["slug"],
         "name": info["name"],
@@ -126,6 +144,8 @@ def upload(api: Api, info: dict, cover_url: str, binary: Path) -> tuple[int, dic
         "coverImageUrl": cover_url,
         "status": "published",
     }
+    if shots:
+        fields["screenshots"] = json.dumps(shots)
     body, kind = multipart(fields, {"file": binary})
     return api.call("POST", "/apps/upload", body, kind)
 
@@ -147,14 +167,18 @@ def publish(api: Api, info: dict, binary: Path) -> int:
         print(f"{info['slug']}: the cover upload answered {status}: {got.get('error', got)}", file=sys.stderr)
         return 1
 
-    status, got = upload(api, info, cover_url, binary)
+    shots = upload_screenshots(api, info)
+    if shots is None:
+        return 1
+
+    status, got = upload(api, info, cover_url, binary, shots)
     if status == 409 and got.get("error") == "in_review" and row is not None:
         print(f"{info['slug']}: withdrawing the submission still pending, so this version replaces it")
         withdrawn, why = api.call("DELETE", f"/apps/{row['id']}/submit")
         if withdrawn >= 300:
             print(f"{info['slug']}: the withdrawal answered {withdrawn}: {why.get('error', why)}", file=sys.stderr)
             return 1
-        status, got = upload(api, info, cover_url, binary)
+        status, got = upload(api, info, cover_url, binary, shots)
     if status not in (200, 201):
         print(f"{info['slug']}: the upload answered {status}: {got.get('error', got)}", file=sys.stderr)
         return 1
@@ -184,7 +208,8 @@ def main(argv=None) -> int:
         print(exc, file=sys.stderr)
         return 1
     if a.dry_run:
-        shown = dict(info, icon=str(info["icon"]), bin=str(a.bin), size=a.bin.stat().st_size)
+        shown = dict(info, icon=str(info["icon"]), screenshots=[str(p) for p in info["screenshots"]],
+                     bin=str(a.bin), size=a.bin.stat().st_size)
         print(json.dumps(shown, indent=2))
         return 0
     token = os.environ.get(TOKEN_ENV, "")

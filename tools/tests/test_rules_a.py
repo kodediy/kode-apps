@@ -13,7 +13,8 @@ from kcheck import core
 
 CMAKE = (FIXTURES / "good_app" / "CMakeLists.txt").read_text()
 MAIN = (FIXTURES / "good_app" / "main" / "good_app_main.c").read_text()
-BLOCK_A = {"A2", "A3", "A4", "A5", "A6"}
+BLOCK_A = {"A2", "A3", "A4", "A5", "A6", "A7"}
+STORE = (FIXTURES / "good_app" / "appdata" / "store.md").read_text()
 
 
 def manifest(line):
@@ -137,6 +138,35 @@ class RulesATest(unittest.TestCase):
     def test_a5_rewrapped_gpl_passes(self):
         gpl = (FIXTURES / "good_app" / "LICENSE").read_text()
         self.assertEqual(self.rejects({"LICENSE": " ".join(gpl.split())}), [])
+
+
+    def levels(self, edits=None):
+        found = core.run(make_ctx(make_app(self.tmp.name, edits)), only=BLOCK_A)
+        return ids(found, "reject"), ids(found, "warn")
+
+    def test_a7_good_text_passes(self):
+        self.assertEqual(self.levels(), ([], []))
+
+    def test_a7_missing_warns(self):
+        self.assertEqual(self.levels({"appdata/store.md": None}), ([], ["A7"]))
+
+    def test_a7_too_short_rejected(self):
+        self.assertEqual(self.rejects({"appdata/store.md": "Reads cards."}), ["A7"])
+
+    def test_a7_too_long_rejected(self):
+        self.assertEqual(self.rejects({"appdata/store.md": "word " * 500}), ["A7"])
+
+    def test_a7_heading_rejected(self):
+        self.assertEqual(self.rejects({"appdata/store.md": "## How to use it\n" + STORE}), ["A7"])
+
+    def test_a7_link_rejected(self):
+        self.assertEqual(self.rejects({"appdata/store.md": STORE + "\n[docs](https://docs.kode.diy)"}), ["A7"])
+
+    def test_a7_html_rejected(self):
+        self.assertEqual(self.rejects({"appdata/store.md": STORE + "\n<br>"}), ["A7"])
+
+    def test_a7_bold_and_lists_pass(self):
+        self.assertEqual(self.rejects({"appdata/store.md": STORE + "\n- *one* more `item`"}), [])
 
 
 if __name__ == "__main__":

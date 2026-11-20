@@ -28,7 +28,7 @@ class ListingTest(unittest.TestCase):
         self.assertEqual(got["name"], "Good App")
         self.assertEqual(got["version"], "1.0.0")
         self.assertEqual(got["category"], "tool")
-        self.assertEqual(got["description"], "A fixture.")
+        self.assertTrue(got["description"].startswith("A fixture that stands for an app of the catalog."))
         self.assertEqual(got["githubUrl"], "https://github.com/kodediy/kode-app-good_app")
         self.assertEqual(got["icon"].name, "icon.png")
         self.assertEqual(got["color"], "#8E8E93")
@@ -66,6 +66,23 @@ class ListingTest(unittest.TestCase):
         for root in (TOOLS.parent, FIXTURES / "catalog"):
             for _, cat in catalog.categories(root):
                 self.assertIn(cat, listing.CATEGORY_MAP, f"{root / 'categories.txt'}: {cat}")
+
+
+    def test_no_store_text_falls_back_to_app_json(self):
+        self.assertEqual(self.read({"appdata/store.md": None})["description"], "A fixture.")
+
+    def test_store_text_is_stripped(self):
+        self.assertEqual(self.read({"appdata/store.md": "\n  Long text.  \n\n"})["description"], "Long text.")
+
+    def test_screenshots_in_name_order(self):
+        app = make_app(self.tmp.name)
+        for n in ("3.png", "2.png"):
+            (app / "appdata" / "screenshots" / n).write_bytes((app / "appdata" / "screenshots" / "1.png").read_bytes())
+        got = listing.listing(app, KODEOS_TOOLS)["screenshots"]
+        self.assertEqual([p.name for p in got], ["1.png", "2.png", "3.png"])
+
+    def test_no_screenshots_is_an_empty_list(self):
+        self.assertEqual(self.read({"appdata/screenshots/1.png": None})["screenshots"], [])
 
 
 if __name__ == "__main__":

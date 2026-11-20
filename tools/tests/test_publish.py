@@ -32,6 +32,7 @@ class FakeApi:
 
 MINE_EMPTY = (200, {"apps": []})
 COVER = (201, {"url": "https://cdn.example/cover.png"})
+SHOT = (201, {"url": "https://cdn.example/shot1.png"})
 UPLOADED = (201, {"id": "a1", "created": True, "submission": {"id": "s1", "status": "pending"}})
 
 
@@ -59,12 +60,16 @@ class PublishTest(unittest.TestCase):
     def test_first_publish_uploads_cover_then_app(self):
         code, calls, raw = self.run_with({("GET", "/apps/mine"): [MINE_EMPTY],
                                           ("POST", "/apps/upload-cover"): [COVER],
+                                          ("POST", "/apps/upload-screenshot"): [SHOT],
                                           ("POST", "/apps/upload"): [UPLOADED]})
         self.assertEqual(code, 0)
-        self.assertEqual(calls, [("GET", "/apps/mine"), ("POST", "/apps/upload-cover"), ("POST", "/apps/upload")])
-        body = raw[2][2]
+        self.assertEqual(calls, [("GET", "/apps/mine"), ("POST", "/apps/upload-cover"),
+                                 ("POST", "/apps/upload-screenshot"), ("POST", "/apps/upload")])
+        body = raw[3][2]
         for field in (b'name="slug"\r\n\r\ngood-app', b'name="status"\r\n\r\npublished',
-                      b'name="coverImageUrl"\r\n\r\nhttps://cdn.example/cover.png', b'name="version"\r\n\r\n1.0.0'):
+                      b'name="coverImageUrl"\r\n\r\nhttps://cdn.example/cover.png', b'name="version"\r\n\r\n1.0.0',
+                      b'name="screenshots"\r\n\r\n["https://cdn.example/shot1.png"]',
+                      b'name="description"\r\n\r\nA fixture that stands for an app of the catalog.'):
             self.assertIn(field, body)
 
     def test_transparent_icon_goes_up_opaque(self):
@@ -73,6 +78,7 @@ class PublishTest(unittest.TestCase):
                                     KODEOS_TOOLS)
         code, _, raw = self.run_with({("GET", "/apps/mine"): [MINE_EMPTY],
                                       ("POST", "/apps/upload-cover"): [COVER],
+                                          ("POST", "/apps/upload-screenshot"): [SHOT],
                                       ("POST", "/apps/upload"): [UPLOADED]})
         self.assertEqual(code, 0)
         self.assertIn(cover.opaque(icon, "#8E8E93"), raw[1][2])
@@ -89,6 +95,7 @@ class PublishTest(unittest.TestCase):
     def test_older_version_is_replaced(self):
         code, calls, _ = self.run_with({("GET", "/apps/mine"): [mine_with("0.9.0")],
                                         ("POST", "/apps/upload-cover"): [COVER],
+                                          ("POST", "/apps/upload-screenshot"): [SHOT],
                                         ("POST", "/apps/upload"): [(200, {"id": "a1", "created": False})]})
         self.assertEqual(code, 0)
         self.assertEqual(calls[-1], ("POST", "/apps/upload"))
@@ -96,6 +103,7 @@ class PublishTest(unittest.TestCase):
     def test_pending_submission_is_withdrawn_once(self):
         code, calls, _ = self.run_with({("GET", "/apps/mine"): [mine_with("0.9.0", "published_update_in_review")],
                                         ("POST", "/apps/upload-cover"): [COVER],
+                                          ("POST", "/apps/upload-screenshot"): [SHOT],
                                         ("POST", "/apps/upload"): [(409, {"error": "in_review"}), UPLOADED],
                                         ("DELETE", "/apps/a1/submit"): [(200, {})]})
         self.assertEqual(code, 0)
@@ -104,12 +112,14 @@ class PublishTest(unittest.TestCase):
     def test_draft_without_submission_fails(self):
         code, _, _ = self.run_with({("GET", "/apps/mine"): [MINE_EMPTY],
                                     ("POST", "/apps/upload-cover"): [COVER],
+                                          ("POST", "/apps/upload-screenshot"): [SHOT],
                                     ("POST", "/apps/upload"): [(201, {"id": "a1", "submitError": "no_cover"})]})
         self.assertEqual(code, 1)
 
     def test_refused_upload_fails(self):
         code, _, _ = self.run_with({("GET", "/apps/mine"): [MINE_EMPTY],
                                     ("POST", "/apps/upload-cover"): [COVER],
+                                          ("POST", "/apps/upload-screenshot"): [SHOT],
                                     ("POST", "/apps/upload"): [(400, {"error": "file too large"})]})
         self.assertEqual(code, 1)
 
@@ -124,6 +134,23 @@ class PublishTest(unittest.TestCase):
                                         ("POST", "/apps/upload-cover"): [(500, {})]})
         self.assertEqual(code, 1)
         self.assertNotIn(("POST", "/apps/upload"), calls)
+
+
+    def test_refused_screenshot_stops_before_the_upload(self):
+        code, calls, _ = self.run_with({("GET", "/apps/mine"): [MINE_EMPTY],
+                                        ("POST", "/apps/upload-cover"): [COVER],
+                                        ("POST", "/apps/upload-screenshot"): [(400, {"error": "screenshot_too_small"})]})
+        self.assertEqual(code, 1)
+        self.assertNotIn(("POST", "/apps/upload"), calls)
+
+    def test_no_screenshots_sends_no_field(self):
+        self.info = dict(self.info, screenshots=[])
+        code, calls, raw = self.run_with({("GET", "/apps/mine"): [MINE_EMPTY],
+                                          ("POST", "/apps/upload-cover"): [COVER],
+                                          ("POST", "/apps/upload"): [UPLOADED]})
+        self.assertEqual(code, 0)
+        self.assertNotIn(("POST", "/apps/upload-screenshot"), calls)
+        self.assertNotIn(b'name="screenshots"', raw[-1][2])
 
 
 if __name__ == "__main__":
