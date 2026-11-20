@@ -31,3 +31,6 @@
 [submodule "apps/gemini"]
 	path = apps/gemini
 	url = ../kode-app-gemini.git
+[submodule "apps/escaner"]
+	path = apps/escaner
+	url = ../kode-app-escaner.git
