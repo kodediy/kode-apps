@@ -31,6 +31,11 @@ class ListingTest(unittest.TestCase):
         self.assertEqual(got["description"], "A fixture.")
         self.assertEqual(got["githubUrl"], "https://github.com/kodediy/kode-app-good_app")
         self.assertEqual(got["icon"].name, "icon.png")
+        self.assertEqual(got["color"], "#8E8E93")
+
+    def test_no_color_lays_the_cover_on_black(self):
+        got = self.read({"appdata/app.json": '{"kode": "1", "description": "A fixture."}'})
+        self.assertEqual(got["color"], listing.COVER_GROUND)
 
     def test_every_category_is_the_marketplaces(self):
         for cat, theirs in listing.CATEGORY_MAP.items():

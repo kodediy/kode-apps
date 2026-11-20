@@ -14,6 +14,9 @@ from kcheck.rules_a import load_kappdata
 
 GITHUB = "https://github.com/kodediy/kode-app-"
 COVER_EXT = (".png", ".jpg", ".jpeg")  # the icons kappdata finds that the marketplace takes as a cover
+# What a transparent icon is laid on for the cover when app.json names no
+# colour: the black page kodeOS draws an app's disc on.
+COVER_GROUND = "#000000"
 # The categories the marketplace takes; it refuses any other word.
 MARKETPLACE_CATEGORIES = ("game", "tool", "communication", "wireless", "creative", "maker", "ai")
 # The catalog's categories (categories.txt) in the marketplace's own list.
@@ -33,7 +36,7 @@ def slug(name: str) -> str:
 
 
 def listing(app: Path, kappdata_dir: Path | None) -> dict:
-    """The fields of the app's listing; the icon is a path, the rest go as they are.
+    """The fields of the app's listing; the icon is a path, the colour is what the cover is laid on.
 
     Raises ValueError when the app has no single manifest, no version, no
     app.json or no icon: the rules refuse all four, so a listing never guesses.
@@ -68,4 +71,5 @@ def listing(app: Path, kappdata_dir: Path | None) -> dict:
         "description": obj.get("description", ""),
         "githubUrl": GITHUB + name,
         "icon": Path(icon),
+        "color": obj.get("color", COVER_GROUND),
     }

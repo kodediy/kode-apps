@@ -17,7 +17,8 @@ is a republish of the same app: same id, page and download link. Steps:
    there already at or above this one ends the run, published (so a run
    repeated, or one that lost a race, changes nothing).
 2. The icon goes up as the cover (`POST /apps/upload-cover`): a submission
-   without one is refused.
+   without one is refused, and so is a cover with transparency, so an icon
+   with an alpha channel goes laid on the app's colour (kcheck.cover).
 3. The upload (`POST /apps/upload`) with `status=published`, which submits
    it for review. A submission still pending is withdrawn first: the
    catalog's main is what the marketplace is meant to show.
@@ -31,6 +32,7 @@ import argparse
 import json
 import os
 import sys
+import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -39,7 +41,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from kcheck import listing  # noqa: E402
+from kcheck import cover, listing  # noqa: E402
 from kcheck.rules_a import VERSION_RE, version_tuple  # noqa: E402
 
 API = "https://api.kode.diy"
@@ -113,7 +115,7 @@ def is_at_or_above(stored: str | None, ours: str) -> bool:
     return version_tuple(stored) >= version_tuple(ours)
 
 
-def upload(api: Api, info: dict, cover: str, binary: Path) -> tuple[int, dict]:
+def upload(api: Api, info: dict, cover_url: str, binary: Path) -> tuple[int, dict]:
     fields = {
         "slug": info["slug"],
         "name": info["name"],
@@ -121,7 +123,7 @@ def upload(api: Api, info: dict, cover: str, binary: Path) -> tuple[int, dict]:
         "category": info["category"],
         "description": info["description"],
         "githubUrl": info["githubUrl"],
-        "coverImageUrl": cover,
+        "coverImageUrl": cover_url,
         "status": "published",
     }
     body, kind = multipart(fields, {"file": binary})
@@ -135,21 +137,24 @@ def publish(api: Api, info: dict, binary: Path) -> int:
               f"({row.get('reviewState')}), nothing to do: {PAGE}{row.get('id')}")
         return 0
 
-    body, kind = multipart({}, {"file": info["icon"]})
+    with tempfile.TemporaryDirectory() as tmp:
+        face = Path(tmp) / info["icon"].name
+        face.write_bytes(cover.opaque(info["icon"].read_bytes(), info["color"]))
+        body, kind = multipart({}, {"file": face})
     status, got = api.call("POST", "/apps/upload-cover", body, kind)
-    cover = got.get("url")
-    if status not in (200, 201) or not cover:
+    cover_url = got.get("url")
+    if status not in (200, 201) or not cover_url:
         print(f"{info['slug']}: the cover upload answered {status}: {got.get('error', got)}", file=sys.stderr)
         return 1
 
-    status, got = upload(api, info, cover, binary)
+    status, got = upload(api, info, cover_url, binary)
     if status == 409 and got.get("error") == "in_review" and row is not None:
         print(f"{info['slug']}: withdrawing the submission still pending, so this version replaces it")
         withdrawn, why = api.call("DELETE", f"/apps/{row['id']}/submit")
         if withdrawn >= 300:
             print(f"{info['slug']}: the withdrawal answered {withdrawn}: {why.get('error', why)}", file=sys.stderr)
             return 1
-        status, got = upload(api, info, cover, binary)
+        status, got = upload(api, info, cover_url, binary)
     if status not in (200, 201):
         print(f"{info['slug']}: the upload answered {status}: {got.get('error', got)}", file=sys.stderr)
         return 1

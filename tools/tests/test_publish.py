@@ -9,9 +9,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.helpers import KODEOS_TOOLS, TOOLS, make_app
+from tests.helpers import KODEOS_TOOLS, TOOLS, make_app, png_bytes
 
-from kcheck import listing
+from kcheck import cover, listing
 
 spec = importlib.util.spec_from_file_location("publish_app", TOOLS / "publish_app.py")
 publish_app = importlib.util.module_from_spec(spec)
@@ -66,6 +66,17 @@ class PublishTest(unittest.TestCase):
         for field in (b'name="slug"\r\n\r\ngood-app', b'name="status"\r\n\r\npublished',
                       b'name="coverImageUrl"\r\n\r\nhttps://cdn.example/cover.png', b'name="version"\r\n\r\n1.0.0'):
             self.assertIn(field, body)
+
+    def test_transparent_icon_goes_up_opaque(self):
+        icon = png_bytes(6, [bytes([0, 0, 0, 0])])
+        self.info = listing.listing(make_app(self.tmp.name, {"appdata/icon.png": icon}, name="clear_app"),
+                                    KODEOS_TOOLS)
+        code, _, raw = self.run_with({("GET", "/apps/mine"): [MINE_EMPTY],
+                                      ("POST", "/apps/upload-cover"): [COVER],
+                                      ("POST", "/apps/upload"): [UPLOADED]})
+        self.assertEqual(code, 0)
+        self.assertIn(cover.opaque(icon, "#8E8E93"), raw[1][2])
+        self.assertNotIn(icon, raw[1][2])
 
     def test_same_version_sends_nothing(self):
         code, calls, _ = self.run_with({("GET", "/apps/mine"): [mine_with("1.0.0")]})
