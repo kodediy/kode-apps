@@ -8,7 +8,6 @@ from kcheck import source
 from kcheck.core import Finding, rule
 
 TAG_RE = re.compile(r"v\d+\.\d+\.\d+")
-RELEASE_WINDOW = 2
 PARTITIONS = "managed_components/kodediy__kbsp/partitions.csv"
 BIN_MAX = 8388608
 # The most an app's ram_budget.txt may give static_max when it says why it is
@@ -23,6 +22,11 @@ CALL_MQTT = re.compile(r"\bkode_mqtt_\w+\s*\(")
 
 def _tag_key(tag):
     return tuple(int(x) for x in tag[1:].split("."))
+
+
+def _line(tag):
+    """The release line of tag, its major and minor numbers: v0.1.5 is on line (0, 1)."""
+    return _tag_key(tag)[:2]
 
 
 SDK_GIT = "git@github.com:kodediy/kode-sdk.git"
@@ -68,12 +72,16 @@ def b1_sdk_pin(ctx):
                       + ", ".join(f"{n} {v}" for n, v in sorted(sdk_versions.items())))
         return
     tag = sdk_versions["kodediy/kode"]
-    allowed = sorted((r for r in ctx.releases if TAG_RE.fullmatch(r)), key=_tag_key, reverse=True)[:RELEASE_WINDOW]
-    if not allowed:
+    published = sorted((r for r in ctx.releases if TAG_RE.fullmatch(r)), key=_tag_key, reverse=True)
+    if not published:
         yield Finding("B1", "reject", where, 0, "no list of published kode-sdk releases to check the pin against")
         return
+    # Any release of the newest line, so a patch release of the SDK does not
+    # refuse every app pinned to the one before it.
+    allowed = [r for r in published if _line(r) == _line(published[0])]
     if not TAG_RE.fullmatch(tag) or tag not in allowed:
-        yield Finding("B1", "reject", where, 0, f"pin {tag!r} must be one of the newest releases: {', '.join(allowed)}")
+        yield Finding("B1", "reject", where, 0,
+                      f"pin {tag!r} must be a release of the newest line: {', '.join(allowed)}")
     for git, versions in sorted(module_versions.items()):
         if len(set(versions.values())) != 1:
             yield Finding("B1", "reject", where, 0,
