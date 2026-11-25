@@ -29,7 +29,10 @@ def _line(tag):
     return _tag_key(tag)[:2]
 
 
-SDK_GIT = "git@github.com:kodediy/kode-sdk.git"
+# The SDK is public, so an app may fetch it over HTTPS, as the app template
+# does, or over SSH, as the apps from before it went public do. Both are the
+# same repository.
+SDK_GITS = ("https://github.com/kodediy/kode-sdk.git", "git@github.com:kodediy/kode-sdk.git")
 
 
 def _cfg(ctx):
@@ -57,12 +60,12 @@ def b1_sdk_pin(ctx):
     for name, d in sorted(deps.items()):
         want = f"components/{name.split('/', 1)[1]}"
         git = d.get("git")
-        if (git != SDK_GIT and git not in modules) or d.get("path") != want or "override_path" in d:
+        if (git not in SDK_GITS and git not in modules) or d.get("path") != want or "override_path" in d:
             yield Finding("B1", "reject", where, 0,
-                          f"{name} must come from git {SDK_GIT} or a module SDK of tools/module_sdks.txt, "
+                          f"{name} must come from git {' or '.join(SDK_GITS)} or a module SDK of tools/module_sdks.txt, "
                           f"path {want}, with no override_path")
             return
-        if git == SDK_GIT:
+        if git in SDK_GITS:
             sdk_versions[name] = d.get("version", "")
         else:
             module_versions.setdefault(git, {})[name] = d.get("version", "")
